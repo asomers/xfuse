@@ -89,45 +89,25 @@ impl Dir2Btree {
             if bmbt_some.bb_level == 0 {
                 break;
             }
-
-            let mut l: i64 = 0;
-            let mut r: i64 = (bmbt_some.bb_numrecs - 1) as i64;
-
-            let mut predecessor = 0;
-
-            while l <= r {
-                let m = (l + r) / 2;
-
-                buf_reader
-                    .seek(SeekFrom::Start(
-                        bmbt_block_offset
-                            + (mem::size_of::<XfsBmbtLblock>() as u64)
-                            + ((m as u64) * (mem::size_of::<BmbtKey>() as u64)),
-                    ))
-                    .unwrap();
+            let mut keys = Vec::with_capacity(bmbt_some.bb_numrecs.into());
+            for _ in 0..bmbt_some.bb_numrecs {
                 let key = BmbtKey::from(buf_reader.by_ref()).br_startoff;
-
-                match key.cmp(&dblock.into()) {
-                    Ordering::Greater => {
-                        r = m - 1;
-                    }
-                    Ordering::Less => {
-                        l = m + 1;
-                        predecessor = m;
-                    }
-                    Ordering::Equal => {
-                        predecessor = m;
-                        break;
-                    }
-                }
+                keys.push(key);
             }
+            let idx = match keys.partition_point(|k| *k <= dblock.into()) {
+                0 => {
+                    // block not found.  Need to refactor to return ENOENT.
+                    todo!()
+                },
+                p => p - 1
+            };
 
             buf_reader
                 .seek(SeekFrom::Start(
                     bmbt_block_offset
                         + (mem::size_of::<XfsBmbtLblock>() as u64)
                         + ((bmbt_some.bb_numrecs as u64) * (mem::size_of::<BmbtKey>() as u64))
-                        + ((predecessor as u64) * (mem::size_of::<XfsBmbtPtr>() as u64)),
+                        + ((idx as u64) * (mem::size_of::<XfsBmbtPtr>() as u64)),
                 ))
                 .unwrap();
             let pointer = buf_reader.read_u64::<BigEndian>().unwrap();
