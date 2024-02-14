@@ -72,9 +72,18 @@ impl Dir2Btree {
         super_block: &Sb,
         dblock: XfsDablk,
     ) -> (Option<XfsBmbtLblock>, Option<BmbtRec>) {
-        let mut bmbt: Option<XfsBmbtLblock> = None;
         let mut bmbt_rec: Option<BmbtRec> = None;
         let mut bmbt_block_offset = 0;
+
+        let mut bmbt = match self.keys.partition_point(|k| k.br_startoff <= dblock.into()) {
+            0 => None,
+            idx => {
+                bmbt_block_offset = self.pointers[idx - 1] * (self.block_size as u64);
+                buf_reader.seek(SeekFrom::Start(bmbt_block_offset)).unwrap();
+                Some(XfsBmbtLblock::from(buf_reader.by_ref(), super_block))
+            }
+        };
+
 
         for (i, BmbtKey { br_startoff: key }) in self.keys.iter().enumerate().rev() {
             if dblock as u64 >= *key {
