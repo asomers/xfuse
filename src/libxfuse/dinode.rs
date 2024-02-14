@@ -326,7 +326,7 @@ impl Dinode {
                     Box::new(Dir2Leaf::from(buf_reader.by_ref(), superblock, bmx))
                 }
             }
-            DiU::Bmbt((bmbt, keys, pointers)) => Box::new(Dir2Btree::from(
+            DiU::Bmbt((bmbt, keys, pointers)) => Box::new(Dir2Btree::new(
                 bmbt.clone(),
                 keys.clone(),
                 pointers.clone(),

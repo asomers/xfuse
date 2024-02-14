@@ -44,21 +44,31 @@ use fuser::{FileAttr, FileType};
 use libc::{c_int, ENOENT};
 
 #[derive(Debug)]
-pub struct Dir2Btree {
-    pub bmbt: BmdrBlock,
-    pub keys: Vec<BmbtKey>,
-    pub pointers: Vec<XfsBmbtPtr>,
-    pub block_size: u32,
+pub struct Dir2BtreeRoot {
+    bmbt: BmdrBlock,
+    keys: Vec<BmbtKey>,
+    pointers: Vec<XfsBmbtPtr>,
+    block_size: u32,
 }
 
-impl Dir2Btree {
-    pub fn from(
+pub type Dir2Btree = Dir2BtreeRoot;
+
+#[derive(Debug)]
+pub struct Dir2BtreeIntermediate {
+    bmbt: XfsBmbtLblock,
+    keys: Vec<BmbtKey>,
+    pointers: Vec<XfsBmbtPtr>,
+    block_size: u32,
+}
+
+impl Dir2BtreeRoot {
+    pub fn new(
         bmbt: BmdrBlock,
         keys: Vec<BmbtKey>,
         pointers: Vec<XfsBmbtPtr>,
         block_size: u32,
-    ) -> Dir2Btree {
-        Dir2Btree {
+    ) -> Dir2BtreeRoot {
+        Dir2BtreeRoot {
             bmbt,
             keys,
             pointers,
@@ -173,7 +183,7 @@ impl Dir2Btree {
     }
 }
 
-impl<R: bincode::de::read::Reader + BufRead + Seek> Dir3<R> for Dir2Btree {
+impl<R: bincode::de::read::Reader + BufRead + Seek> Dir3<R> for Dir2BtreeRoot {
     fn lookup(
         &self,
         buf_reader: &mut R,
